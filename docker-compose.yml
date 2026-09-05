@@ -1,0 +1,43 @@
+version: "3.9"
+
+services:
+  # ── Backend API ──────────────────────────────────────────────────────────────
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    container_name: pollution-backend
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=sqlite:///./pollution_platform.db
+      - JWT_SECRET=${JWT_SECRET:-pollution-platform-secret-2026}
+      - JWT_EXPIRE_MINUTES=${JWT_EXPIRE_MINUTES:-1440}
+      - WATSONX_API_KEY=${WATSONX_API_KEY:-}
+      - WATSONX_AI_URL=${WATSONX_AI_URL:-}
+      - GRANITE_MODEL_ID=${GRANITE_MODEL_ID:-ibm/granite-4-h-small}
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+    volumes:
+      - ./data:/app/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  # ── Frontend ─────────────────────────────────────────────────────────────────
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    container_name: pollution-frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+volumes:
+  app_data:
